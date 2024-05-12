@@ -37,6 +37,7 @@
 
 package com.food.Sec_web.jwt;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -50,6 +51,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
 
 @Service
 public class TokenGenerator {
@@ -77,6 +79,33 @@ public class TokenGenerator {
         }
         return String.join(",",authoritySet);
     }
+
+
+    // extract all claims present in token
+    private Claims extractAllClaims(String token){
+        return Jwts.parser().setSigningKey(getSignKey())
+                .build().parseClaimsJws(token).getBody();
+    }
+
+  // token => extractAll claims => resolve only subject claim (username)  [extractUserName]
+
+   // i am extracting all the claims from the token
+    public <T> T extractClaims(String token, Function<Claims,T> claimsResolver){
+        Claims claims=extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    // and from those claims i want only subject that is userName
+    public String extractUsername(String token){
+        return extractClaims(token,Claims::getSubject);
+    }
+
+    public boolean isTokenValid(String token,UserDetails userDetails){
+        String username=extractUsername(token);
+        return (username.equals(userDetails.getUsername()));
+    }
+
+
 
 
 

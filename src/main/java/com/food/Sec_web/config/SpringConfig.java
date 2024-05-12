@@ -1,6 +1,7 @@
 package com.food.Sec_web.config;
 
 import com.food.Sec_web.Repository.UserRepository;
+import com.food.Sec_web.jwt.Filter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,12 +16,23 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static com.food.Sec_web.model.Role.ADMIN;
+import static com.food.Sec_web.model.Role.MEMBER;
+import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 @Configuration
 public class SpringConfig {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuthenticationProvider authenticationProvider;
+
+    @Autowired
+    private Filter filter;
 
 //    @Bean
 //    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -33,7 +45,14 @@ public class SpringConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(req->
-                        req.requestMatchers("/api/*").permitAll().anyRequest().authenticated()).build();
+                        req.requestMatchers("/api/*").permitAll()
+                        .requestMatchers("/manage/**").hasAnyRole(ADMIN.name(),MEMBER.name())
+                                .requestMatchers("/admin").hasRole(ADMIN.name())
+                                .anyRequest().authenticated())
+                .sessionManagement(session->session.sessionCreationPolicy(STATELESS)).
+        authenticationProvider(authenticationProvider).
+                addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean
